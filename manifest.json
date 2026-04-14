@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "ACV",
+  "version": "3.0",
+  "description": "ACV extension for intercepting YouTube subtitle data.",
+  "permissions": ["scripting"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://acv-project.koreacentral.cloudapp.azure.com/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_title": "ACV",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "css": ["style.css"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://www.youtube.com/*"]
+    }
+  ]
+}
