@@ -67,10 +67,11 @@
 }
 
 .acv-card-subtitle {
-    margin: 0;
+    margin: 0 0 18px;
     color: #6d7688;
     font-size: 14px;
     line-height: 1.6;
+    white-space: pre-line;
 }
 
 .acv-score-strong {
@@ -183,11 +184,44 @@
     letter-spacing: -0.02em;
 }
 
+.acv-meta-blocks {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.acv-meta-block {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 3px solid transparent;
+}
+
+.acv-meta-summary {
+    background: #ffffff;
+}
+
+.acv-meta-block-label {
+    margin: 0 0 8px;
+    color: #202938;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-transform: none;
+}
+
+.acv-meta-title {
+    margin: 0;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
 .acv-meta {
     margin: 0 0 16px;
     color: #636d7e;
     font-size: 13px;
     line-height: 1.65;
+    white-space: pre-line;
 }
 
 #acv-safe-panel[data-tone="danger"] .acv-panel-label,
@@ -208,6 +242,31 @@
 #acv-safe-panel[data-tone="review"] .acv-panel-label,
 #acv-safe-panel[data-tone="review"] .acv-safe-title {
     color: #7c3aed;
+}
+
+#acv-safe-panel[data-tone="danger"] .acv-meta-summary,
+#acv-safe-panel[data-tone="danger"] .report-item-grade {
+    border-color: #fcd5d9;
+}
+
+#acv-safe-panel[data-tone="safe"] .acv-meta-summary,
+#acv-safe-panel[data-tone="safe"] .report-item-grade {
+    border-color: #d6f5d8;
+}
+
+#acv-safe-panel[data-tone="caution"] .acv-meta-summary,
+#acv-safe-panel[data-tone="caution"] .report-item-grade {
+    border-color: #fff0c4;
+}
+
+#acv-safe-panel[data-tone="review"] .acv-meta-summary,
+#acv-safe-panel[data-tone="review"] .report-item-grade {
+    border-color: #e7d8ff;
+}
+
+#acv-safe-panel[data-tone="pending"] .acv-meta-summary,
+#acv-safe-panel[data-tone="pending"] .report-item-grade {
+    border-color: #dce4ef;
 }
 
 .acv-report-area {

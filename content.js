@@ -14,6 +14,8 @@ const UI_IDS = {
     panel: "acv-safe-panel",
     panelTitle: "acv-panel-title",
     panelMeta: "acv-panel-meta",
+    panelVideoTitle: "acv-panel-video-title",
+    panelChannelName: "acv-panel-channel-name",
     panelReport: "acv-panel-report",
     panelRaw: "acv-panel-raw",
     closePanelButton: "acv-close-panel",
@@ -57,9 +59,9 @@ const TEXT = {
     uploadError: "\uC790\uB9C9 \uB370\uC774\uD130 \uC804\uC1A1\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
     streamError: "\uBD84\uC11D \uC2A4\uD2B8\uB9BC \uC5F0\uACB0\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
     reasonSummary: "\uBD84\uC11D \uC694\uC57D",
-    reasonTrustLevel: "\uC11C\uBC84 \uD310\uC815",
+    reasonTrustLevel: "ACV 등급",
     reasonClaims: "\uAC80\uC99D \uD3EC\uC778\uD2B8 ",
-    reasonTitle: "\uC601\uC0C1 \uC81C\uBAA9",
+    reasonTitle: "영상 제목",
     reasonChannel: "\uCC44\uB110 \uBA85",
     reasonPublished: "\uAC8C\uC2DC \uC77C\uC2DC",
     reasonAnalyzed: "\uBD84\uC11D \uC2DC\uAC01",
@@ -196,7 +198,20 @@ function ensurePanel(root) {
         TEXT.panelLabel,
         "</div>",
         `<div class="acv-safe-title" id="${UI_IDS.panelTitle}">${TEXT.panelTitle}</div>`,
-        `<p class="acv-meta" id="${UI_IDS.panelMeta}">${TEXT.panelWaiting}</p>`,
+        `<div class="acv-meta-blocks">`,
+        `  <div class="acv-meta-block acv-meta-summary">`,
+        `    <div class="acv-meta-block-label">리포트 요약</div>`,
+        `    <p class="acv-meta" id="${UI_IDS.panelMeta}">${TEXT.panelWaiting}</p>`,
+        "  </div>",
+        `  <div class="acv-meta-block">`,
+        `    <div class="acv-meta-block-label">제목</div>`,
+        `    <p class="acv-meta acv-meta-title" id="${UI_IDS.panelVideoTitle}"></p>`,
+        "  </div>",
+        `  <div class="acv-meta-block">`,
+        `    <div class="acv-meta-block-label">채널명</div>`,
+        `    <p class="acv-meta" id="${UI_IDS.panelChannelName}"></p>`,
+        "  </div>",
+        "</div>",
         `<div class="acv-report-area" id="${UI_IDS.panelReport}"><p class="acv-report-empty">${TEXT.reportEmpty}</p></div>`,
         `<details class="acv-raw-details"><summary>${TEXT.rawToggle}</summary><pre class="acv-raw-pre" id="${UI_IDS.panelRaw}">${TEXT.rawPending}</pre></details>`,
     ].join("");
@@ -280,6 +295,8 @@ function ensureUi() {
         overlay: document.getElementById(UI_IDS.overlay),
         panelTitle: document.getElementById(UI_IDS.panelTitle),
         panelMeta: document.getElementById(UI_IDS.panelMeta),
+        panelVideoTitle: document.getElementById(UI_IDS.panelVideoTitle),
+        panelChannelName: document.getElementById(UI_IDS.panelChannelName),
         panelReport: document.getElementById(UI_IDS.panelReport),
         panelRaw: document.getElementById(UI_IDS.panelRaw),
         modalTitle: document.getElementById(UI_IDS.modalTitle),
@@ -571,6 +588,50 @@ function updateBadge({ tone, label, scoreText }) {
     }
 }
 
+function decodeHtmlEntities(value) {
+    const text = String(value || "");
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = text;
+    return textarea.value;
+}
+
+function htmlEscape(value) {
+    return String(value || "").replace(/[&<>\"']/g, (char) => {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+        }[char];
+    });
+}
+
+function formatPanelText(value) {
+    const text = decodeHtmlEntities(String(value || "")).replace(/\r?\n/g, " ").trim();
+    return htmlEscape(text).replace(/\r?\n/g, "<br>");
+}
+
+function formatVideoTitle(value) {
+    const raw = decodeHtmlEntities(String(value || "")).replace(/\r?\n/g, " ").trim();
+    const normalized = raw.replace(/\s+/g, " ");
+    const hashIndex = normalized.search(/#(?=\S)/);
+
+    if (hashIndex === -1) {
+        return htmlEscape(normalized);
+    }
+
+    const titleText = normalized.slice(0, hashIndex).trim();
+    const hashtagText = normalized
+        .slice(hashIndex)
+        .replace(/\s*#\s*/g, "#")
+        .trim();
+
+    const titleHtml = htmlEscape(titleText);
+    const hashtagsHtml = htmlEscape(hashtagText);
+    return titleHtml ? `${titleHtml}<br><br>${hashtagsHtml}` : hashtagsHtml;
+}
+
 function updatePanelShell(shell) {
     const ui = ensureUi();
     if (!ui?.panel || !ui.panelLabel || !ui.panelTitle || !ui.panelMeta) {
@@ -578,9 +639,6 @@ function updatePanelShell(shell) {
     }
 
     if (typeof shell === "string") {
-        ui.panel.dataset.tone = "pending";
-        ui.panelLabel.textContent = TEXT.panelLabel;
-        ui.panelTitle.textContent = TEXT.panelTitle;
         ui.panelMeta.textContent = shell;
         return;
     }
@@ -589,6 +647,12 @@ function updatePanelShell(shell) {
     ui.panelLabel.textContent = shell?.label || TEXT.panelLabel;
     ui.panelTitle.textContent = shell?.title || TEXT.panelTitle;
     ui.panelMeta.textContent = shell?.meta || TEXT.panelWaiting;
+    if (ui.panelVideoTitle) {
+        ui.panelVideoTitle.innerHTML = shell?.videoTitle ? formatVideoTitle(shell.videoTitle) : "";
+    }
+    if (ui.panelChannelName) {
+        ui.panelChannelName.textContent = shell?.channelName || "";
+    }
 }
 
 function resetPanelContent() {
@@ -604,6 +668,8 @@ function resetPanelContent() {
         label: TEXT.panelLabel,
         title: TEXT.panelTitle,
         meta: TEXT.panelWaiting,
+        videoTitle: "",
+        channelName: "",
     });
 }
 
@@ -1032,7 +1098,7 @@ function buildPanelItems(data) {
     }
 
     if (serverStatus) {
-        items.push({ title: TEXT.reasonTrustLevel, description: serverStatus });
+        items.push({ title: TEXT.reasonTrustLevel, description: serverStatus, isTrustLevel: true });
     }
 
     items.push(...extractReasonItems(data));
@@ -1101,13 +1167,14 @@ function renderPanel(data) {
     const tone = inferTone(data);
     const toneCopy = getToneUiCopy(tone);
     const metadata = getDisplayMetadata(data);
-    const metaParts = [toneCopy.panelMeta, metadata.title, metadata.channelName].filter(Boolean);
 
     updatePanelShell({
         tone,
         label: toneCopy.panelLabel,
         title: toneCopy.panelTitle,
-        meta: metaParts.join(" | "),
+        meta: toneCopy.panelMeta,
+        videoTitle: metadata.title,
+        channelName: metadata.channelName,
     });
 
     const items = buildPanelItems(data);
@@ -1118,7 +1185,7 @@ function renderPanel(data) {
     } else {
         for (const item of items) {
             const card = document.createElement("div");
-            card.className = "report-item";
+            card.className = "report-item" + (item.isTrustLevel ? " report-item-grade" : "");
 
             const title = document.createElement("h4");
             title.textContent = item.title;
