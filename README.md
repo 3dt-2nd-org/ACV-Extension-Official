@@ -1,3 +1,5 @@
+작성 : 2026-04-15, 20:30
+
 # ACV v4
 
 YouTube 영상의 자막과 메타데이터를 수집해 서버 분석 결과를 표시하는 Chrome 확장프로그램입니다.
@@ -294,6 +296,7 @@ ACV-v4/
 - `DEVLOG_2026-04-14_ad-subtitle-fix-final.md`
 - `DEVLOG_2026-04-14_gitignore-azurite.md`
 - `DEVLOG_2026-04-15_panel-ui-update.md`
+- `DEVLOG_2026-04-16_manual-subtitle-422-followup.md`
 
 ## 참고
 

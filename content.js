@@ -757,6 +757,23 @@ function pickPresentEntries(metadata) {
     );
 }
 
+function normalizeTags(value) {
+    if (Array.isArray(value)) {
+        return value
+            .filter((tag) => typeof tag === "string" && tag.trim())
+            .map((tag) => tag.trim());
+    }
+
+    if (typeof value !== "string" || !value.trim()) {
+        return [];
+    }
+
+    return value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+}
+
 function normalizeMetadata(metadata, fallbackVideoId) {
     const source = metadata && typeof metadata === "object" ? metadata : {};
     const videoId = firstString([source.video_id, source.videoId, fallbackVideoId, getVideoId()]);
@@ -769,10 +786,22 @@ function normalizeMetadata(metadata, fallbackVideoId) {
         channel_id: firstString([source.channel_id, source.channelId]),
         channel_title: firstString([source.channel_title, source.channelName, source.author]),
         published_at: firstString([source.published_at, source.publishDate]),
-        tags: Array.isArray(source.tags)
-            ? source.tags.filter((tag) => typeof tag === "string" && tag.trim())
-            : [],
+        tags: normalizeTags(source.tags),
     };
+}
+
+function extractChannelIdFromHref(href) {
+    if (typeof href !== "string" || !href.trim()) {
+        return "";
+    }
+
+    try {
+        const url = new URL(href, window.location.origin);
+        const segments = url.pathname.split("/").filter(Boolean);
+        return segments[0] === "channel" ? firstString([segments[1]]) : "";
+    } catch (error) {
+        return "";
+    }
 }
 
 function getDomMetadata(fallbackVideoId) {
@@ -780,8 +809,7 @@ function getDomMetadata(fallbackVideoId) {
         document.querySelector("ytd-watch-metadata #owner a[href]") ||
         document.querySelector("#owner-name a[href]") ||
         document.querySelector("ytd-channel-name a[href]");
-    const channelHref = channelLink?.getAttribute("href") || "";
-    const channelId = channelHref.startsWith("/channel/") ? channelHref.replace("/channel/", "").split(/[/?#]/)[0] : "";
+    const channelId = extractChannelIdFromHref(channelLink?.getAttribute("href"));
 
     return normalizeMetadata(
         {
@@ -799,6 +827,7 @@ function getDomMetadata(fallbackVideoId) {
                 document.querySelector('meta[itemprop="datePublished"]')?.getAttribute("content"),
                 document.querySelector('meta[itemprop="uploadDate"]')?.getAttribute("content"),
             ]),
+            tags: normalizeTags(document.querySelector('meta[name="keywords"]')?.getAttribute("content")),
         },
         fallbackVideoId
     );
@@ -809,6 +838,20 @@ function mergeMetadata(metadata, fallbackVideoId) {
         ...pickPresentEntries(normalizeMetadata(cachedMetadata, fallbackVideoId)),
         ...pickPresentEntries(getDomMetadata(fallbackVideoId)),
         ...pickPresentEntries(normalizeMetadata(metadata, fallbackVideoId)),
+    };
+}
+
+function buildUploadMetadata(metadata, fallbackVideoId) {
+    const merged = normalizeMetadata(mergeMetadata(metadata, fallbackVideoId), fallbackVideoId);
+
+    return {
+        video_id: firstString([merged.video_id, fallbackVideoId, getVideoId()]),
+        title: merged.title || "",
+        description: merged.description || "",
+        channel_id: merged.channel_id || "",
+        channel_title: merged.channel_title || "",
+        published_at: merged.published_at || "",
+        tags: normalizeTags(merged.tags),
     };
 }
 
@@ -1281,8 +1324,8 @@ function uploadSubtitle(videoId, data, metadata, attempt = 0) {
         return;
     }
 
-    const resolvedMetadata = mergeMetadata(metadata, videoId);
-    const resolvedMetadataVideoId = firstString([resolvedMetadata.video_id, resolvedMetadata.videoId]);
+    const resolvedMetadata = buildUploadMetadata(metadata, videoId);
+    const resolvedMetadataVideoId = firstString([resolvedMetadata.video_id]);
     if (resolvedMetadataVideoId && resolvedMetadataVideoId !== videoId) {
         console.warn("[EXT-CONTENT] Ignoring subtitle upload for mismatched video.", {
             expectedVideoId: videoId,
@@ -1307,8 +1350,12 @@ function uploadSubtitle(videoId, data, metadata, attempt = 0) {
     })
         .then(async (response) => {
             if (!response.ok) {
-                const error = new Error(`HTTP ${response.status}`);
+                const errorBody = await response.text().catch(() => "");
+                const error = new Error(
+                    errorBody ? `HTTP ${response.status}: ${errorBody}` : `HTTP ${response.status}`
+                );
                 error.status = response.status;
+                error.body = errorBody;
                 throw error;
             }
 
@@ -1428,6 +1475,7 @@ function connectSSE(videoId) {
 
     eventSource.addEventListener("extract_command", () => {
         isLeader = true;
+        console.log("[EXT-CONTENT] extract_command received.", { videoId, hasCachedSubtitle: Boolean(cachedSubtitleData) });
         setPendingState(TEXT.waitingSubtitles);
 
         if (cachedSubtitleData && !subtitleUploaded) {
@@ -1540,38 +1588,38 @@ init();
 window.addEventListener("yt-navigate-finish", init);
 window.addEventListener("beforeunload", closeEventStream);
 
-window.addEventListener("message", (event) => {
-    if (event.source !== window) {
+function handleBridgeMessage(message, source = "window") {
+    if (!message || typeof message !== "object") {
         return;
     }
 
-    if (event.data?.type === "YT_SUB_RETRY_HINT") {
+    if (message?.type === "YT_SUB_RETRY_HINT") {
         const activeVideoId = getActiveVideoId();
         const relatedVideoIds = [
-            event.data?.requestVideoId,
-            event.data?.playerVideoId,
-            event.data?.pageVideoId,
+            message?.requestVideoId,
+            message?.playerVideoId,
+            message?.pageVideoId,
         ].filter((value) => typeof value === "string" && value.trim());
 
         if (activeVideoId && relatedVideoIds.length > 0 && !relatedVideoIds.includes(activeVideoId)) {
             return;
         }
 
-        if (event.data?.reason === "ad-playing") {
+        if (message?.reason === "ad-playing") {
             setPendingState(TEXT.waitingAd);
             scheduleSubtitleRetry("ad-playing", 1500);
             return;
         }
 
-        scheduleSubtitleRetry(event.data?.reason || "inject-hint", 900);
+        scheduleSubtitleRetry(message?.reason || "inject-hint", 900);
         return;
     }
 
-    if (event.data?.type !== "YT_SUB_DATA") {
+    if (message?.type !== "YT_SUB_DATA") {
         return;
     }
 
-    const filterResult = shouldIgnoreSubtitleMessage(event.data);
+    const filterResult = shouldIgnoreSubtitleMessage(message);
     if (filterResult.ignore) {
         if (filterResult.reason === "ad-playing") {
             setPendingState(TEXT.waitingAd);
@@ -1583,14 +1631,28 @@ window.addEventListener("message", (event) => {
     }
 
     const videoId = filterResult.context.activeVideoId;
-    cachedSubtitleData = event.data.payload;
-    cachedMetadata = mergeMetadata(event.data.metadata, videoId);
+    cachedSubtitleData = message.payload;
+    cachedMetadata = mergeMetadata(message.metadata, videoId);
     clearSubtitleRetryTimer();
     cancelSubtitleFetchLoop();
+    console.log("[EXT-CONTENT] Subtitle payload received.", {
+        source,
+        videoId,
+        isLeader,
+        hasMetadata: Boolean(cachedMetadata?.title || cachedMetadata?.channel_title),
+    });
 
     updatePanelShell(cachedMetadata?.title || TEXT.subtitleCached);
 
     if (isLeader && !subtitleUploaded && videoId) {
         uploadSubtitle(videoId, cachedSubtitleData, cachedMetadata);
     }
+}
+
+window.addEventListener("message", (event) => {
+    if (event.source !== window) {
+        return;
+    }
+
+    handleBridgeMessage(event.data, "window");
 });

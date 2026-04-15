@@ -14,6 +14,16 @@
         return typeof value === "string" && value.trim().length > 0;
     }
 
+    function firstNonEmptyString(values) {
+        for (const value of values) {
+            if (isNonEmptyString(value)) {
+                return value.trim();
+            }
+        }
+
+        return "";
+    }
+
     function safeCall(fn, fallback = null) {
         try {
             return fn();
@@ -176,6 +186,84 @@
 
     function shouldSuppressFetchError(url) {
         return /doubleclick\.net|youtube\.com\/pagead\//i.test(`${url || ""}`);
+    }
+
+    function normalizeTagList(value) {
+        if (Array.isArray(value)) {
+            return value.filter(isNonEmptyString).map((item) => item.trim());
+        }
+
+        if (!isNonEmptyString(value)) {
+            return [];
+        }
+
+        return value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    function extractChannelIdFromHref(href) {
+        if (!isNonEmptyString(href)) {
+            return "";
+        }
+
+        try {
+            const url = new URL(href, window.location.origin);
+            const parts = url.pathname.split("/").filter(Boolean);
+            if (parts[0] === "channel" && isNonEmptyString(parts[1])) {
+                return parts[1];
+            }
+        } catch (error) {}
+
+        return "";
+    }
+
+    function getDomFallbackMetadata(targetVideoId) {
+        const pageVideoId = getPageVideoId();
+        const initialMetadata = extractFromPlayerResponse(window.ytInitialPlayerResponse);
+        const canUseInitialMetadata =
+            initialMetadata &&
+            [targetVideoId, pageVideoId].filter(isNonEmptyString).includes(initialMetadata.videoId);
+        const channelLink =
+            safeCall(() => document.querySelector("ytd-watch-metadata #owner a[href]"), null) ||
+            safeCall(() => document.querySelector("#owner-name a[href]"), null) ||
+            safeCall(() => document.querySelector("ytd-channel-name a[href]"), null);
+
+        return {
+            videoId: firstNonEmptyString([targetVideoId, pageVideoId, initialMetadata?.videoId]),
+            title: firstNonEmptyString([
+                safeCall(() => document.querySelector('meta[name="title"]')?.getAttribute("content"), ""),
+                safeCall(() => document.querySelector('meta[property="og:title"]')?.getAttribute("content"), ""),
+                safeCall(() => document.querySelector("ytd-watch-metadata h1 yt-formatted-string")?.textContent, ""),
+                safeCall(() => document.querySelector("h1.title yt-formatted-string")?.textContent, ""),
+                safeCall(() => document.title.replace(/\s*-\s*YouTube$/, ""), ""),
+                canUseInitialMetadata ? initialMetadata.title : "",
+            ]),
+            description: firstNonEmptyString([
+                safeCall(() => document.querySelector('meta[name="description"]')?.getAttribute("content"), ""),
+                safeCall(() => document.querySelector('meta[property="og:description"]')?.getAttribute("content"), ""),
+                canUseInitialMetadata ? initialMetadata.description : "",
+            ]),
+            channel_id: firstNonEmptyString([
+                extractChannelIdFromHref(safeCall(() => channelLink?.getAttribute("href"), "")),
+                canUseInitialMetadata ? initialMetadata.channel_id : "",
+            ]),
+            channel_title: firstNonEmptyString([
+                safeCall(() => channelLink?.textContent, ""),
+                safeCall(() => document.querySelector('link[itemprop="name"]')?.getAttribute("content"), ""),
+                canUseInitialMetadata ? initialMetadata.channel_title : "",
+            ]),
+            published_at: firstNonEmptyString([
+                safeCall(() => document.querySelector('meta[itemprop="datePublished"]')?.getAttribute("content"), ""),
+                safeCall(() => document.querySelector('meta[itemprop="uploadDate"]')?.getAttribute("content"), ""),
+                canUseInitialMetadata ? initialMetadata.published_at : "",
+            ]),
+            tags: normalizeTagList(
+                safeCall(() => document.querySelector('meta[name="keywords"]')?.getAttribute("content"), "") ||
+                    (canUseInitialMetadata ? initialMetadata.tags : [])
+            ),
+        };
     }
 
     function rememberPendingSubtitlePayload(data, requestVideoId, pageVideoId, playerVideoId) {
@@ -343,10 +431,16 @@
     }
 
     function getFallbackMetadata(targetVideoId) {
+        const responseCandidates = [
+            safeCall(() => {
+                const player = getPlayerApi();
+                return player && typeof player.getPlayerResponse === "function" ? player.getPlayerResponse() : null;
+            }, null),
+            window.ytInitialPlayerResponse || null,
+        ];
+
         try {
-            const player = getPlayerApi();
-            if (player && typeof player.getPlayerResponse === "function") {
-                const response = player.getPlayerResponse();
+            for (const response of responseCandidates) {
                 const data = extractFromPlayerResponse(response);
                 if (data && data.videoId === targetVideoId) {
                     return data;
@@ -356,27 +450,27 @@
             console.error("[EXT-INJECT] Failed to resolve fallback metadata", error);
         }
 
+        const domFallback = getDomFallbackMetadata(targetVideoId);
         return {
-            videoId: targetVideoId || "",
-            title: "",
-            description: "",
-            channel_id: "",
-            channel_title: "",
-            published_at: "",
-            tags: [],
+            videoId: firstNonEmptyString([targetVideoId, domFallback.videoId]),
+            title: domFallback.title || "",
+            description: domFallback.description || "",
+            channel_id: domFallback.channel_id || "",
+            channel_title: domFallback.channel_title || "",
+            published_at: domFallback.published_at || "",
+            tags: normalizeTagList(domFallback.tags),
         };
     }
 
     function postControlMessage(type, payload = {}) {
+        const message = {
+            type,
+            timestamp: Date.now(),
+            ...payload,
+        };
+
         try {
-            window.postMessage(
-                {
-                    type,
-                    timestamp: Date.now(),
-                    ...payload,
-                },
-                "*"
-            );
+            window.postMessage(message, "*");
         } catch (error) {
             console.error("[EXT-INJECT] Failed to dispatch control message", error);
         }
@@ -599,22 +693,20 @@
             metadataCache[resolvedVideoId] ||
             metadataCache[confirmedVideoId] ||
             getFallbackMetadata(resolvedVideoId);
+        const message = {
+            type: "YT_SUB_DATA",
+            payload: data,
+            metadata: finalMetadata,
+            requestVideoId: requestVideoId || "",
+            resolvedVideoId,
+            pageVideoId: pageVideoId || "",
+            playerVideoId: playerVideoId || "",
+            isAd: false,
+            timestamp: Date.now(),
+        };
 
         try {
-            window.postMessage(
-                {
-                    type: "YT_SUB_DATA",
-                    payload: data,
-                    metadata: finalMetadata,
-                    requestVideoId: requestVideoId || "",
-                    resolvedVideoId,
-                    pageVideoId: pageVideoId || "",
-                    playerVideoId: playerVideoId || "",
-                    isAd: false,
-                    timestamp: Date.now(),
-                },
-                "*"
-            );
+            window.postMessage(message, "*");
         } catch (error) {
             console.error("[EXT-INJECT] Failed to dispatch subtitle payload", error);
         }
