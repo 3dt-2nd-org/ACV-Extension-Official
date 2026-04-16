@@ -77,7 +77,7 @@ function getToneUiCopy(tone) {
                 panelTitle: "\uC624\uD574\uB97C \uBD80\uB97C \uC218 \uC788\uB294 \uB0B4\uC6A9\uC774 \uBCF4\uC5EC\uC694",
                 panelMeta: "\uACFC\uC7A5\uB418\uAC70\uB098 \uC0AC\uC2E4 \uD655\uC778\uC774 \uD544\uC694\uD55C \uD45C\uD604\uC774 \uD3EC\uD568\uB410\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC544\uB798 \uADFC\uAC70\uB97C \uBA3C\uC800 \uD655\uC778\uD574 \uBCF4\uC138\uC694.",
                 overlayTitle: '\uC2E0\uB8B0\uB3C4\uAC00 <span class="acv-tone-word">\uB0AE\uC740</span> \uC601\uC0C1\uC785\uB2C8\uB2E4',
-                scoreDescription: (scoreText) => `\uAC80\uC99D \uACB0\uACFC \uC2E0\uB8B0\uB3C4 \uC810\uC218\uAC00 <strong class="acv-score-strong">${scoreText}</strong>\uB85C,<br> \uADF8\uB300\uB85C \uBBFF\uAE30\uBCF4\uB2E4 \uADFC\uAC70\uB97C \uAF2D \uD655\uC778\uD574 \uBCF4\uC138\uC694.`,
+                scoreDescription: (scoreText) => `\uAC80\uC99D \uACB0\uACFC \uC2E0\uB8B0\uB3C4 \uC810\uC218\uAC00 <strong class="acv-score-strong">${scoreText}</strong>\uC73C\uB85C,<br> \uADF8\uB300\uB85C \uBBFF\uAE30\uBCF4\uB2E4 \uADFC\uAC70\uB97C \uAF2D \uD655\uC778\uD574 \uBCF4\uC138\uC694.`,
             };
         case "caution":
             return {
@@ -86,7 +86,7 @@ function getToneUiCopy(tone) {
                 panelTitle: "\uD655\uC778\uD558\uACE0 \uC2DC\uCCAD\uD558\uB294 \uAC8C \uC88B\uC544\uC694",
                 panelMeta: "\uC77C\uBD80 \uC8FC\uC7A5\uC774\uB098 \uD45C\uD604\uC740 \uD55C \uBC88 \uB354 \uAC80\uD1A0\uD560 \uD544\uC694\uAC00 \uC788\uC2B5\uB2C8\uB2E4. \uC544\uB798 \uADFC\uAC70\uB97C \uD568\uAED8 \uD655\uC778\uD574 \uBCF4\uC138\uC694.",
                 overlayTitle: '\uC2E0\uB8B0\uB3C4\uC5D0 <span class="acv-tone-word">\uC8FC\uC758</span>\uAC00 \uD544\uC694\uD55C \uC601\uC0C1\uC785\uB2C8\uB2E4',
-                scoreDescription: (scoreText) => `\uAC80\uC99D \uACB0\uACFC \uC2E0\uB8B0\uB3C4 \uC810\uC218\uAC00 <strong class="acv-score-strong">${scoreText}</strong>\uB85C,<br> \uC77C\uBD80 \uB0B4\uC6A9\uC740 \uD55C \uBC88 \uB354 \uD655\uC778\uD558\uB294 \uAC83\uC774 \uC88B\uC2B5\uB2C8\uB2E4.`,
+                scoreDescription: (scoreText) => `\uAC80\uC99D \uACB0\uACFC \uC2E0\uB8B0\uB3C4 \uC810\uC218\uAC00 <strong class="acv-score-strong">${scoreText}</strong>\uC73C\uB85C,<br> \uC77C\uBD80 \uB0B4\uC6A9\uC740 \uD55C \uBC88 \uB354 \uD655\uC778\uD558\uB294 \uAC83\uC774 \uC88B\uC2B5\uB2C8\uB2E4.`,
             };
         case "safe":
             return {
@@ -95,7 +95,7 @@ function getToneUiCopy(tone) {
                 panelTitle: "\uBE44\uAD50\uC801 \uC548\uC2EC\uD558\uACE0 \uBCFC \uC218 \uC788\uC5B4\uC694",
                 panelMeta: "\uD604\uC7AC \uBD84\uC11D \uAE30\uC900\uC5D0\uC11C\uB294 \uC2E0\uB8B0\uB3C4\uAC00 \uB192\uC740 \uD3B8\uC785\uB2C8\uB2E4. \uADF8\uB798\uB3C4 \uC544\uB798 \uADFC\uAC70\uB294 \uD568\uAED8 \uD655\uC778\uD560 \uC218 \uC788\uC5B4\uC694.",
                 overlayTitle: '\uC2E0\uB8B0\uB3C4\uAC00 <span class="acv-tone-word">\uC591\uD638\uD55C</span> \uC601\uC0C1\uC785\uB2C8\uB2E4',
-                scoreDescription: (scoreText) => `\uAC80\uC99D \uACB0\uACFC \uC2E0\uB8B0\uB3C4 \uC810\uC218\uAC00 <strong class="acv-score-strong">${scoreText}</strong>\uB85C,<br> \uBE44\uAD50\uC801 \uC548\uC2EC\uD558\uACE0 \uC2DC\uCCAD\uD560 \uC218 \uC788\uB294 \uC218\uC900\uC785\uB2C8\uB2E4.`,
+                scoreDescription: (scoreText) => `\uAC80\uC99D \uACB0\uACFC \uC2E0\uB8B0\uB3C4 \uC810\uC218\uAC00 <strong class="acv-score-strong">${scoreText}</strong>\uC73C\uB85C,<br> \uBE44\uAD50\uC801 \uC548\uC2EC\uD558\uACE0 \uC2DC\uCCAD\uD560 \uC218 \uC788\uB294 \uC218\uC900\uC785\uB2C8\uB2E4.`,
             };
         case "review":
             return {
