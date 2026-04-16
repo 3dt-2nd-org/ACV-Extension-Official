@@ -58,7 +58,7 @@ const TEXT = {
     uploadError: "\uC790\uB9C9 \uB370\uC774\uD130 \uC804\uC1A1\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
     streamError: "\uBD84\uC11D \uC2A4\uD2B8\uB9BC \uC5F0\uACB0\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
     reasonSummary: "\uBD84\uC11D \uC694\uC57D",
-    reasonTrustLevel: "ACV \uB4F1\uAC8C",
+    reasonTrustLevel: "ACV \uB4F1\uAE09",
     reasonClaims: "\uAC80\uC99D \uD3EC\uC778\uD2B8 ",
     reasonTitle: "\uC601\uC0C1 \uC81C\uBAA9",
     reasonChannel: "\uCC44\uB110 \uBA85",
