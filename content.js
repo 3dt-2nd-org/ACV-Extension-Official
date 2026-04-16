@@ -29,7 +29,6 @@ const TEXT = {
     reviewBadge: "\uC7AC\uAC80\uD1A0",
     errorBadge: "\uC624\uB958",
     points: "\uC810",
-    scoreLabel: "\uC810\uC218",
     panelLabel: "ACV",
     panelTitle: "\uC2E0\uB8B0\uB3C4 \uD310\uB2E8 \uC774\uC720",
     panelWaiting: "\uBD84\uC11D \uC644\uB8CC \uD6C4 \uC2E0\uB8B0\uB3C4 \uD310\uB2E8 \uADFC\uAC70\uB97C \uC5EC\uAE30\uC11C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
@@ -1274,7 +1273,11 @@ function renderAnalysis(data) {
     const tone = inferTone(data);
     const toneCopy = getToneUiCopy(tone);
     const trustLevelLabel = getTrustLevelLabel(data);
-    const scoreText = trustLevelLabel && ["danger", "caution", "safe"].includes(tone) ? TEXT.scoreLabel : "";
+    const scoreInfo = extractScoreInfo(data);
+    const displayScoreValue = scoreInfo.value !== null ? getDisplayScoreValue(scoreInfo.value) : null;
+    const scoreText = displayScoreValue !== null && ["danger", "caution", "safe"].includes(tone)
+        ? `${displayScoreValue}${TEXT.points}`
+        : "";
 
     updateBadge({
         tone: ["danger", "caution", "safe", "review"].includes(tone) ? tone : "pending",
